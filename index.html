@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Conclave – Wähle den Papst</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: white;
+        text-align: center;
+    }
+
+    h1 {
+        margin-top: 20px;
+    }
+
+    .container {
+        margin-top: 30px;
+    }
+
+    button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
+        background: crimson;
+        color: white;
+    }
+
+    button:hover {
+        background: darkred;
+    }
+
+    .card {
+        background: #222;
+        margin: 10px auto;
+        padding: 15px;
+        width: 300px;
+        border-radius: 10px;
+    }
+
+    .result {
+        margin-top: 20px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🏛️ CONCLAVE</h1>
+<p>Wähle den nächsten Papst</p>
+
+<div class="container" id="game"></div>
+
+<script>
+const IDEOLOGIEN = {
+    "Erzkonservativ": -3,
+    "Traditionell": -2,
+    "Konservativ": -1,
+    "Moderat": 1,
+    "Gemäßigt Reformerisch": 2,
+    "Progressiv": 3
+};
+
+const NAMES = [
+    "Antonio","Giuseppe","Robert","Luis","Peter",
+    "Francisco","Jean","Michael","Angelo","Carlos",
+    "Joseph","Thomas","Andreas","Luca","Matteo"
+];
+
+let kardinaele = [];
+let runde = 1;
+
+// Kardinäle generieren
+function generiereKardinaele(anzahl){
+    let arr = [];
+    for(let i=0;i<anzahl;i++){
+        let name = NAMES[Math.floor(Math.random()*NAMES.length)] + " " + i;
+        let ideologie = Object.keys(IDEOLOGIEN)[Math.floor(Math.random()*6)];
+
+        arr.push({
+            name: name,
+            ideologie: ideologie,
+            wert: IDEOLOGIEN[ideologie]
+        });
+    }
+    return arr;
+}
+
+// Kandidaten wählen
+function waehleKandidaten(){
+    let shuffled = kardinaele.sort(()=>0.5 - Math.random());
+    return shuffled.slice(0,3);
+}
+
+// Abstimmung
+function abstimmung(kandidaten, spielerChoice){
+    let stimmen = {};
+    kandidaten.forEach(k => stimmen[k.name] = 0);
+
+    // Spieler
+    stimmen[spielerChoice.name]++;
+
+    // KI
+    kardinaele.forEach(k => {
+        let beste = kandidaten[0];
+        let minDiff = 999;
+
+        kandidaten.forEach(c => {
+            let diff = Math.abs(k.wert - c.wert);
+            if(diff < minDiff){
+                minDiff = diff;
+                beste = c;
+            }
+        });
+
+        stimmen[beste.name]++;
+    });
+
+    return stimmen;
+}
+
+// Ergebnis anzeigen
+function zeigeErgebnis(stimmen){
+    let html = "<div class='result'><h2>Ergebnis</h2>";
+
+    let gesamt = 0;
+    for(let k in stimmen) gesamt += stimmen[k];
+
+    let gewinner = null;
+
+    for(let k in stimmen){
+        html += `<p>${k}: ${stimmen[k]} Stimmen</p>`;
+        if(stimmen[k] > gesamt*(2/3)){
+            gewinner = k;
+        }
+    }
+
+    if(gewinner){
+        html += `<h2>🤍 HABEMUS PAPAM: ${gewinner}</h2>`;
+    } else {
+        html += `<p>⚫ Schwarzer Rauch</p>`;
+    }
+
+    html += "</div>";
+
+    return {html, gewinner};
+}
+
+// Spielrunde
+function neueRunde(){
+    const game = document.getElementById("game");
+    game.innerHTML = `<h2>Wahlgang ${runde}</h2>`;
+
+    let kandidaten = waehleKandidaten();
+
+    kandidaten.forEach(k => {
+        let div = document.createElement("div");
+        div.className = "card";
+
+        div.innerHTML = `
+            <h3>${k.name}</h3>
+            <p>${k.ideologie}</p>
+            <button>Wählen</button>
+        `;
+
+        div.querySelector("button").onclick = () => {
+            let stimmen = abstimmung(kandidaten, k);
+            let result = zeigeErgebnis(stimmen);
+
+            game.innerHTML = result.html;
+
+            if(!result.gewinner){
+                let btn = document.createElement("button");
+                btn.innerText = "Nächster Wahlgang";
+                btn.onclick = () => {
+                    runde++;
+                    neueRunde();
+                };
+                game.appendChild(btn);
+            }
+        };
+
+        game.appendChild(div);
+    });
+}
+
+// Start
+kardinaele = generiereKardinaele(29);
+neueRunde();
+</script>
+
+</body>
+</html>
